@@ -3,6 +3,7 @@ from controllers.receita_controller import receitas
 from controllers.usuario_controller import usuarios
 
 app = Flask(__name__)
+
 app.register_blueprint(receitas)
 app.register_blueprint(usuarios)
 
