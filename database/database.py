@@ -8,12 +8,13 @@ def consultar(sql, parametros=()):
         password="SUA_SENHA_AQUI",
         database="api_receitas"
     )
-    try:
-        cursor = conexao.cursor(dictionary=True)
-        try:
-            cursor.execute(sql, parametros)
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-    finally:
-        conexao.close()
+
+    cursor = conexao.cursor(dictionary=True)
+    cursor.execute(sql, parametros)
+
+    dados = cursor.fetchall()
+
+    cursor.close()
+    conexao.close()
+
+    return dados
