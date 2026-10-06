@@ -5,7 +5,7 @@ def consultar(sql, parametros=()):
     conexao = mysql.connector.connect(
         host="localhost",
         user="root",
-        password="SUA_SENHA_AQUI",
+        password="",
         database="api_receitas"
     )
 

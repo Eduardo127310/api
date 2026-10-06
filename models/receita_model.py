@@ -1,4 +1,4 @@
-from database import consultar
+from database.database import consultar
 
 
 def listar(termo, pagina):
