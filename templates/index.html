@@ -2,89 +2,99 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Receitas</title>
-    <style>
-        body { font-family: Arial; max-width: 800px; margin: 30px auto; padding: 15px; }
-        li { margin-bottom: 20px; white-space: pre-line; }
-    </style>
 </head>
+
 <body>
-    <h1>Receitas</h1>
-    <label for="termo">Nome da receita ou ingrediente:</label>
-    <input id="termo">
-    <button onclick="buscarReceitas(1, true)">Buscar</button>
-    <p id="erro" role="alert"></p>
-    <ul id="receitas"></ul>
-    <button id="anterior" onclick="buscarReceitas(pagina - 1)">Anterior</button>
-    <span id="pagina"></span>
-    <button id="proxima" onclick="buscarReceitas(pagina + 1)">Próxima</button>
 
-    <h2>Usuários</h2>
-    <label for="nome">Nome do usuário:</label>
-    <input id="nome">
-    <button onclick="buscarUsuarios()">Buscar usuário</button>
-    <ul id="usuarios"></ul>
+<h1>Receitas</h1>
 
-    <script>
-        let pagina = 1;
-        let termo = "";
+<input id="termo" placeholder="Receita ou ingrediente">
+<button onclick="buscarReceitas(1, true)">Buscar</button>
 
-        async function buscarReceitas(numero, novaBusca = false) {
-            if (novaBusca) termo = document.getElementById("termo").value.trim();
-            let url = "/api/receitas";
-            if (termo) url += "/busca/" + encodeURIComponent(termo);
-            const resposta = await fetch(url + "?page=" + numero);
-            if (!resposta.ok) {
-                document.getElementById("erro").textContent = "Erro ao consultar receitas. Confira o MySQL.";
-                return;
-            }
-            const dados = await resposta.json();
-            pagina = dados.pagina_atual;
-            document.getElementById("erro").textContent = "";
-            const lista = document.getElementById("receitas");
-            lista.textContent = dados.receitas.length ? "" : "Nenhuma receita encontrada.";
-            for (const receita of dados.receitas) {
-                const item = document.createElement("li");
-                item.textContent = receita.titulo + "\n" + receita.descricao +
-                    "\nIngredientes: " + receita.ingredientes +
-                    "\nPreparo: " + receita.modo_preparo + "\nAutor: ";
-                const link = document.createElement("a");
-                link.textContent = receita.autor;
-                link.href = "/perfil/" + receita.usuario_id;
-                item.appendChild(link);
-                lista.appendChild(item);
-            }
-            document.getElementById("pagina").textContent = "Página " + pagina;
-            document.getElementById("anterior").disabled = pagina <= 1;
-            document.getElementById("proxima").disabled = pagina >= dados.total_paginas;
-        }
+<ul id="receitas"></ul>
 
-        async function buscarUsuarios() {
-            const nome = document.getElementById("nome").value.trim();
-            let url = "/api/usuarios";
-            if (nome) url += "/busca/" + encodeURIComponent(nome);
-            const resposta = await fetch(url);
-            if (!resposta.ok) {
-                document.getElementById("erro").textContent = "Erro ao consultar usuários. Confira o MySQL.";
-                return;
-            }
-            const dados = await resposta.json();
-            document.getElementById("erro").textContent = "";
-            const lista = document.getElementById("usuarios");
-            lista.textContent = dados.usuarios.length ? "" : "Nenhum usuário encontrado.";
-            for (const usuario of dados.usuarios) {
-                const item = document.createElement("li");
-                const link = document.createElement("a");
-                link.textContent = usuario.nome;
-                link.href = "/perfil/" + usuario.id;
-                item.appendChild(link);
-                lista.appendChild(item);
-            }
-        }
+<button id="anterior" onclick="buscarReceitas(pagina - 1)">Anterior</button>
+<span id="pagina"></span>
+<button id="proxima" onclick="buscarReceitas(pagina + 1)">Próxima</button>
 
-        buscarReceitas(1);
-        buscarUsuarios();
-    </script>
+
+<h2>Usuários</h2>
+
+<input id="nome" placeholder="Nome do usuário">
+<button onclick="buscarUsuarios()">Buscar</button>
+
+<ul id="usuarios"></ul>
+
+
+<script>
+
+let pagina = 1;
+let termo = "";
+
+
+async function buscarReceitas(numero, novaBusca = false) {
+
+    if (novaBusca) {
+        termo = document.getElementById("termo").value;
+    }
+
+    let url = "/api/receitas";
+
+    if (termo) {
+        url += "/busca/" + encodeURIComponent(termo);
+    }
+
+    const resposta = await fetch(url + "?page=" + numero);
+    const dados = await resposta.json();
+
+    pagina = dados.pagina;
+
+    document.getElementById("receitas").innerHTML =
+        dados.receitas.map(r => `
+            <li>
+                <b>${r.titulo}</b><br>
+                ${r.descricao}<br>
+                Ingredientes: ${r.ingredientes}<br>
+                Autor: <a href="/perfil/${r.usuario_id}">${r.autor}</a>
+            </li>
+        `).join("");
+
+    document.getElementById("pagina").textContent =
+        "Página " + pagina;
+
+    document.getElementById("anterior").disabled =
+        pagina <= 1;
+
+    document.getElementById("proxima").disabled =
+        pagina >= dados.paginas;
+}
+
+
+async function buscarUsuarios() {
+
+    const nome = document.getElementById("nome").value;
+
+    if (!nome) return;
+
+    const resposta = await fetch(
+        "/api/usuarios/busca/" + encodeURIComponent(nome)
+    );
+
+    const dados = await resposta.json();
+
+    document.getElementById("usuarios").innerHTML =
+        dados.map(u => `
+            <li>
+                <a href="/perfil/${u.id}">${u.nome}</a>
+            </li>
+        `).join("");
+}
+
+
+buscarReceitas(1);
+
+</script>
+
 </body>
 </html>
