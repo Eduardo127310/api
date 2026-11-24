@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Receitas</title>
+</head>
+
+<body>
+
+<h1>Receitas</h1>
+
+<p><b id="mensagem"></b></p>
+
+
+<h2>Login</h2>
+
+<p id="status"></p>
+
+<input id="email" type="email" placeholder="E-mail">
+<input id="senha" type="password" placeholder="Senha">
+<button onclick="entrar()">Entrar</button>
+<button onclick="sair()">Sair</button>
+
+
+<h2>Nova receita</h2>
+
+<input id="titulo" placeholder="Título"><br>
+<input id="descricao" placeholder="Descrição"><br>
+<textarea id="ingredientes" placeholder="Ingredientes"></textarea><br>
+<textarea id="modo_preparo" placeholder="Modo de preparo"></textarea><br>
+<button onclick="cadastrarReceita()">Cadastrar</button>
+
+
+<h2>Buscar receitas</h2>
+
+<input id="termo" placeholder="Receita ou ingrediente">
+<button onclick="buscarReceitas(1, true)">Buscar</button>
+
+<ul id="receitas"></ul>
+
+<button id="anterior" onclick="buscarReceitas(pagina - 1)">Anterior</button>
+<span id="pagina"></span>
+<button id="proxima" onclick="buscarReceitas(pagina + 1)">Próxima</button>
+
+
+<h2>Usuários</h2>
+
+<input id="nome" placeholder="Nome do usuário">
+<button onclick="buscarUsuarios()">Buscar</button>
+
+<ul id="usuarios"></ul>
+
+
+<script>
+
+let pagina = 1;
+let termo = "";
+
+
+// Segurança (XSS): transforma < > & em texto comum antes de colocar no HTML
+function escapar(texto) {
+    const div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
+}
+
+
+function valor(id) {
+    return document.getElementById(id).value;
+}
+
+
+function mostrarMensagem(texto) {
+    document.getElementById("mensagem").textContent = texto;
+}
+
+
+function mostrarStatus(nome) {
+    document.getElementById("status").textContent =
+        nome ? "Logado como " + nome : "Você não está logado.";
+}
+
+
+// Envia JSON para a API. Se der erro, mostra a mensagem da API e devolve null.
+async function enviar(metodo, url, dados) {
+    const resposta = await fetch(url, {
+        method: metodo,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dados)
+    });
+
+    const resultado = await resposta.json();
+
+    if (!resposta.ok) {
+        mostrarMensagem(resultado.erro);
+        return null;
+    }
+
+    mostrarMensagem(resultado.mensagem);
+    return resultado;
+}
+
+
+async function verificarLogin() {
+    const resposta = await fetch("/api/sessao");
+    const dados = await resposta.json();
+
+    mostrarStatus(resposta.ok ? dados.nome : null);
+}
+
+
+async function entrar() {
+    const dados = await enviar("POST", "/api/sessao", {
+        email: valor("email"),
+        senha: valor("senha")
+    });
+
+    document.getElementById("senha").value = "";
+
+    if (dados) {
+        mostrarStatus(dados.nome);
+    }
+}
+
+
+async function sair() {
+    const dados = await enviar("DELETE", "/api/sessao", {});
+
+    if (dados) {
+        mostrarStatus(null);
+    }
+}
+
+
+async function cadastrarReceita() {
+    const dados = await enviar("POST", "/api/receitas", {
+        titulo: valor("titulo"),
+        descricao: valor("descricao"),
+        ingredientes: valor("ingredientes"),
+        modo_preparo: valor("modo_preparo")
+    });
+
+    if (dados) {
+        document.getElementById("titulo").value = "";
+        document.getElementById("descricao").value = "";
+        document.getElementById("ingredientes").value = "";
+        document.getElementById("modo_preparo").value = "";
+
+        buscarReceitas(1);
+    }
+}
+
+
+async function buscarReceitas(numero, novaBusca = false) {
+
+    if (novaBusca) {
+        termo = document.getElementById("termo").value;
+    }
+
+    let url = "/api/receitas";
+
+    if (termo) {
+        url += "/busca/" + encodeURIComponent(termo);
+    }
+
+    const resposta = await fetch(url + "?page=" + numero);
+    const dados = await resposta.json();
+
+    pagina = dados.pagina;
+
+    document.getElementById("receitas").innerHTML =
+        dados.receitas.map(r => `
+            <li>
+                <b>${escapar(r.titulo)}</b><br>
+                ${escapar(r.descricao)}<br>
+                Ingredientes: ${escapar(r.ingredientes)}<br>
+                Modo de preparo: ${escapar(r.modo_preparo)}<br>
+                Autor: <a href="/perfil/${r.usuario_id}">${escapar(r.autor)}</a>
+            </li>
+        `).join("");
+
+    document.getElementById("pagina").textContent =
+        "Página " + pagina;
+
+    document.getElementById("anterior").disabled =
+        pagina <= 1;
+
+    document.getElementById("proxima").disabled =
+        pagina >= dados.paginas;
+}
+
+
+async function buscarUsuarios() {
+
+    const nome = document.getElementById("nome").value;
+
+    if (!nome) return;
+
+    const resposta = await fetch(
+        "/api/usuarios/busca/" + encodeURIComponent(nome)
+    );
+
+    const dados = await resposta.json();
+
+    document.getElementById("usuarios").innerHTML =
+        dados.map(u => `
+            <li>
+                <a href="/perfil/${u.id}">${escapar(u.nome)}</a>
+            </li>
+        `).join("");
+}
+
+
+verificarLogin();
+buscarReceitas(1);
+
+</script>
+
+</body>
+</html>
